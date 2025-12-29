@@ -48,7 +48,7 @@ class GeneticAlgorithm:
         print("初始化模块...")
         self.initializer = FilterInitializer()
         self.evaluator = FitnessEvaluator() # 会加载 database_spe.mat
-        self.operator = EvolutionaryOperator(self.initializer, mutation_sigma=10.0)
+        self.operator = EvolutionaryOperator(self.initializer, mutation_sigma=15.0)
         
         # 历史记录
         self.history = {
@@ -214,7 +214,8 @@ class GeneticAlgorithm:
                 else:
                     child = parent1.copy() # 没交叉就直接复制
                 # 变异
-                child = self.operator.mutation(child, probability=self.mutation_rate)
+                progress = float(gen) / self.generations
+                child = self.operator.mutation_sparse_adaptive(child, probability=self.mutation_rate, progress=progress)
                 # 随机替换 (引入新血统)
                 child = self.operator.random_replacement(child, probability=self.replacement_rate)
                 next_population.append(child)
@@ -290,7 +291,7 @@ if __name__ == "__main__":
     # 运行算法
     ga = GeneticAlgorithm(
         pop_size=100,        # 种群大小
-        generations=50,     # 迭代代数
+        generations=60,     # 迭代代数
         mutation_rate=0.2,  # 变异率
         crossover_rate=0.8  # 交叉率
     )

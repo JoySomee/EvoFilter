@@ -3,13 +3,13 @@ from initial import FilterInitializer
 
 
 class EvolutionaryOperator:
-    def __init__(self, initializer, mutation_sigma=10.0):
+    def __init__(self, initializer, mutation_sigma=15.0):
         """
         :param initializer: 之前定义的 FilterInitializer 实例 (用于约束校验和生成新基因)
         :param mutation_sigma: 高斯变异的标准差 (nm)
         """
         self.initializer = initializer
-        self.mutation_sigma = mutation_sigma
+        self.initial_sigma = mutation_sigma
 
     def crossover(self, parent_a, parent_b):
         """
@@ -68,6 +68,53 @@ class EvolutionaryOperator:
                 offspring[i] = self.initializer.validate_and_fix(new_thicknesses)
                 
         return offspring
+    
+    def mutation_sparse_adaptive(self, individual, probability=0.1, progress=0.0):
+        """
+        【操作二：稀疏自适应变异】 (Sparse Adaptive Mutation)
+        改进点：
+        1. 自适应步长：随着 progress (0->1) 增加，变异幅度 sigma 减小。
+        2. 稀疏变异：不再修改所有层，而是随机选择少数几层进行修改。
+        
+        :param individual: 待变异个体
+        :param probability: 变异概率
+        :param progress: 当前进化进度 (Current_Gen / Max_Gen)，范围 0.0 到 1.0
+        :return: 变异后的个体
+        """
+        offspring = individual.copy()
+        num_filters, num_layers = offspring.shape
+        
+        # 1. 计算动态步长 (非均匀变异)
+        # 公式：sigma = base * (1 - progress)^2
+        # 例如：开始是 15nm，进度 50% 时是 3.75nm，结束时接近 1nm
+        current_sigma = self.initial_sigma * ((1.0 - progress) ** 2)
+        # 保证最小有 1.0nm 的变动能力 (防止后期变为0)
+        current_sigma = max(1.0, current_sigma)
+        
+        for i in range(num_filters):
+            if np.random.rand() < probability:
+                
+                # --- 改进逻辑：稀疏选择 ---
+                # 随机决定要修改多少层 (1 到 5 层之间，而不是全部 20 层)
+                # 这种"微创手术"比"全身整容"更容易产生优良后代
+                num_changes = np.random.randint(1, 6) 
+                
+                # 随机选择要修改的层索引
+                layer_indices = np.random.choice(num_layers, num_changes, replace=False)
+                
+                # 生成噪声
+                delta = np.random.normal(0, current_sigma, num_changes)
+                delta = np.round(delta).astype(int)
+                
+                # 应用变异
+                new_thicknesses = offspring[i].copy()
+                new_thicknesses[layer_indices] += delta
+                
+                # 约束校验
+                offspring[i] = self.initializer.validate_and_fix(new_thicknesses)
+                
+        return offspring
+    
 
     def random_replacement(self, individual, probability=0.05):
         """

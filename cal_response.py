@@ -19,10 +19,10 @@ def get_n_list(material_nk_low, material_nk_high, material_nk_substrat, layer_nu
     with open(output_path, 'wb') as f:
         pickle.dump(nk_map, f)
 
-def cal_response(d_list, nk_path='nk_map.pkl'):
+def cal_response(d_list, lambda_list, nk_path='nk_map.pkl'):
     with open(nk_path, 'rb') as f:
         nk_list_map = pickle.load(f)
-    lambda_list = np.linspace(400, 700, 301) #in nm 
+    lambda_list = np.array(lambda_list) #in nm 
     T_list = []
     for lambda_vac in lambda_list:
         n_list = nk_list_map[lambda_vac].copy()
@@ -31,7 +31,7 @@ def cal_response(d_list, nk_path='nk_map.pkl'):
         T_list.append(coh_tmm('s', n_list, d_list, 0, lambda_vac)['T'])
     return lambda_list, T_list
 
-def cal_response_batch(thick_designs, nk_path='nk_map.pkl'):
+def cal_response_batch(thick_designs, lambda_list=np.linspace(400, 700, 301), nk_path='nk_map.pkl'):
     num_designs = thick_designs.shape[0]
     inf_col = np.full((num_designs, 1), np.inf)
     substrate_col = np.full((num_designs, 1), 500)
@@ -39,7 +39,7 @@ def cal_response_batch(thick_designs, nk_path='nk_map.pkl'):
     T_lists = []
     for _, d_list_numpy in enumerate(d_lists):
         d_list = d_list_numpy.tolist()
-        _, T_list = cal_response(d_list, nk_path)
+        _, T_list = cal_response(d_list, lambda_list, nk_path)
         T_lists.append(T_list)
     return np.array(T_lists)
 

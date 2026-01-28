@@ -1,0 +1,52 @@
+# EvoFilter 遗传算法配置文件
+# 修改此文件后直接运行 python src/main.py 即可
+# 使用 python src/main.py --list_fitness 查看所有可用适应度函数
+
+# ============ 遗传算法基本参数 ============
+ga:
+  pop_size: 100           # 种群大小
+  generations: 200        # 迭代代数
+  mutation_rate: 0.2      # 变异率
+  crossover_rate: 0.8     # 交叉率
+  replacement_rate: 0.1   # 随机替换率 (引入新个体)
+  num_workers: 32         # 并行进程数 (设为null或删除此行则自动使用CPU核数-1)
+
+# ============ 适应度函数配置 ============
+# 可用类型: information, uncorrelation, stability, combined, weighted_sum, pareto
+# 使用 --list_fitness 查看详细说明
+fitness:
+  fitness_type: information  # 适应度函数类型
+
+  # 不相关性计算模式:
+  #   - row: 行不相关性，计算滤光片之间的相关性 (16x16矩阵)
+  #   - column: 列不相关性，计算波长之间的相关性 (WxW矩阵)
+  #   - both: 同时计算行和列，取较差的分数
+  corr_mode: row
+
+  # 以下权重仅在 fitness_type=combined 时生效
+  w_info: 1.0             # 信息量权重 (D-Optimality)
+  w_uncorr: 0.0           # 去相关性权重
+  w_stability: 0.0        # 稳定性权重
+
+# ============ 适应度函数惩罚项参数 ============
+# 适应度 = Reward - P_trans - P_corr - P_uniformity - P_stability
+
+penalties:
+  # 惩罚1: 透过率门控 (均值平方惩罚)
+  # 当 mean_transmittance < trans_threshold 时触发
+  trans_threshold: 0.5    # 透过率阈值
+  lambda_trans: 3000.0    # 惩罚系数
+
+  # 惩罚2: 互相关性 (阈值门控重罚)
+  # 当 max_correlation > corr_threshold 时触发
+  corr_threshold: 0.3     # 最大相关系数阈值
+  lambda_corr: 20.0       # 惩罚系数
+
+  # 惩罚3: 通道均匀性 (标准差平方惩罚)
+  # 始终生效，惩罚通道间透过率差异
+  lambda_uniformity: 20.0 # 惩罚系数
+
+  # 惩罚4: 稳定性 (带死区的合页损失)
+  # 当 condition_number > cond_threshold 时触发
+  cond_threshold: 100.0   # 条件数阈值 (死区边界)
+  lambda_stability: 2.0   # 惩罚系数
